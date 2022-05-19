@@ -65,12 +65,23 @@ public class DsClient {
 					// sending data to servers variable
 					for (int i = 0; i < serverCount; i++) {
 						str = (String) in.readLine();
-						System.out.println(str);
 						servers[i] = str;
 					}
 					
 					// capableServer string array will contain the data of a single capable server
 					String[] capableServer = servers[0].split(" ");
+					for(int i = 0; i < servers.length; i++) {
+						String[] server = servers[i].split(" ");
+						if(Integer.parseInt(server[4]) >= jobCores && Integer.parseInt(server[5]) >= jobMem && Integer.parseInt(server[6]) >= jobDisk){
+							capableServer = servers[i].split(" ");
+						       	break;	
+						}	
+					}
+
+					for(int i= 0; i<capableServer.length; i++) {
+						System.out.print(capableServer[i] + " ");
+					}
+					System.out.println("\n");
 
 					dos.write(("OK\n").getBytes());
 					str = (String) in.readLine();
