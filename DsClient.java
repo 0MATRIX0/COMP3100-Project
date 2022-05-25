@@ -2,6 +2,13 @@
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.io.File;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Node;
+import org.w3c.dom.Element;
 
 public class DsClient {
 	public static void main(String[] args) {
@@ -30,6 +37,23 @@ public class DsClient {
 			str = (String) in.readLine();
 			System.out.println(str);
 			
+			// Reading ds-system.xml file to get the data related to servers and jobs	
+			File file = new File("ds-system.xml");
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			DocumentBuilder db = dbf.newDocumentBuilder();
+			Document dsSystem = db.parse(file);
+			dsSystem.getDocumentElement().normalize();
+			// serversData node list will contain the data from the server tag of the ds-system.xml file
+			NodeList serversData = dsSystem.getElementsByTagName("server");
+			// serversCost hash map will contain the cost of the server
+			Map<String, String> serversCost = new HashMap<String, String>();
+
+			for(int i = 0; i < serversData.getLength(); i++) {
+				Node serverData = serversData.item(i);
+				Element sData = (Element) serverData;
+				serversCost.put(sData.getAttribute("type"), sData.getAttribute("hourlyRate"));
+			}
+
 			//while loop to keep running till the server send QUIT
 			while (!(str.equals("QUIT"))) {
 				dos.write(("REDY\n").getBytes());
@@ -68,30 +92,48 @@ public class DsClient {
 						servers[i] = str;
 					}
 					
+					dos.write(("OK\n").getBytes());
+					str = (String)in.readLine();
+
+					// serverWaitTime string array will contain the servers wait time
+					String[] serverWaitTime = new String[servers.length];
+					for(int i = 0; i < servers.length; i++) {
+						dos.write(("EJWT " + servers[i].split(" ")[0] + " " + servers[i].split(" ")[1] + "\n").getBytes());
+						dos.flush();
+						str = (String)in.readLine();
+						serverWaitTime[i] = str;
+					}
+					
 					// capableServer string array will contain the data of a single capable server
 					String[] capableServer = servers[0].split(" ");
+					int selServer = servers.length-1;
+					
 					for(int i = 0; i < servers.length; i++) {
 						String[] server = servers[i].split(" ");
 						if(Integer.parseInt(server[4]) >= jobCores && Integer.parseInt(server[5]) >= jobMem && Integer.parseInt(server[6]) >= jobDisk){
-							capableServer = servers[i].split(" ");
-						       	break;	
-						}	
+							if(Integer.parseInt(serverWaitTime[selServer]) > Integer.parseInt(serverWaitTime[i])) {
+								selServer = i;
+							}
+						}
 					}
+
+					capableServer = servers[selServer].split(" ");
 
 					for(int i= 0; i<capableServer.length; i++) {
 						System.out.print(capableServer[i] + " ");
 					}
 					System.out.println("\n");
 
-					dos.write(("OK\n").getBytes());
-					str = (String) in.readLine();
-					System.out.println(str);
-
 					// checking if the job type is JOBN or not so that jobs are only scheduled when needed
-					if (str.equals(".") && job.split(" ")[0].equals("JOBN")) {
+					if (job.split(" ")[0].equals("JOBN")) {
 						dos.write(("SCHD " + jobID + " " + capableServer[0] + " " + capableServer[1] + "\n").getBytes());
 						str = (String) in.readLine();
 						System.out.println(str);
+					}
+					if(job.split(" ")[0].equals("JCPL")){
+						for(int i = 0; i < allServers.length; i++) {
+
+						}
 					}
 				} else {
 					dos.write("QUIT\n".getBytes());
